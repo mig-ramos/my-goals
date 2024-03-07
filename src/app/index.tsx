@@ -15,9 +15,10 @@ import { Transactions, TransactionsProps } from "@/components/Transactions";
 
 //DATABASE
 import { useGoalRepository } from "@/database/useGoalRepository";
+import { useTransactionRepository } from "@/database/useTransactionRepository";
 
 // UTILS
-import { mocks } from "@/utils/mocks";
+// import { mocks } from "@/utils/mocks";
 
 export default function Home() {
   // LISTS
@@ -30,6 +31,7 @@ export default function Home() {
 
   //DATABASE
   const useGoal = useGoalRepository();
+  const useTransaction = useTransactionRepository()
 
   // BOTTOM SHEET
   const bottomSheetRef = useRef<Bottom>(null);
@@ -67,6 +69,7 @@ export default function Home() {
       // const response = mocks.goals;
       const response = useGoal.all();
       setGoals(response);
+      fetchGoals()
     } catch (error) {
       console.log(error);
     }
@@ -74,12 +77,12 @@ export default function Home() {
 
   async function fetchTransactions() {
     try {
-      const response = mocks.transactions;
+      const response = useTransaction.findLatest()
 
       setTransactions(
         response.map((item) => ({
           ...item,
-          date: dayjs(item.created_at).format("DD/MM/YYYY [às] HH:mm"),
+          date: dayjs(item.created_at).format("DD/MM/YYYY [as] HH:mm"),
         }))
       );
     } catch (error) {

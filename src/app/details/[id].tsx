@@ -1,63 +1,65 @@
 // LIBS
-import { useEffect, useRef, useState } from "react"
-import { Alert, Keyboard, View } from "react-native"
-import { router, useLocalSearchParams } from "expo-router"
-import Bottom from "@gorhom/bottom-sheet"
-import dayjs from "dayjs"
+import { useEffect, useRef, useState } from "react";
+import { Alert, Keyboard, View } from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import Bottom from "@gorhom/bottom-sheet";
+import dayjs from "dayjs";
 
 //DATABASE
-import { useGoalRepository } from "@/database/useGoalRepository"
+import { useGoalRepository } from "@/database/useGoalRepository";
+import { useTransactionRepository } from "@/database/useTransactionRepository";
 
 // COMPONENTS
-import { Input } from "@/components/Input"
-import { Header } from "@/components/Header"
-import { Button } from "@/components/Button"
-import { Loading } from "@/components/Loading"
-import { Progress } from "@/components/Progress"
-import { BackButton } from "@/components/BackButton"
-import { BottomSheet } from "@/components/BottomSheet"
-import { Transactions } from "@/components/Transactions"
-import { TransactionProps } from "@/components/Transaction"
-import { TransactionTypeSelect } from "@/components/TransactionTypeSelect"
+import { Input } from "@/components/Input";
+import { Header } from "@/components/Header";
+import { Button } from "@/components/Button";
+import { Loading } from "@/components/Loading";
+import { Progress } from "@/components/Progress";
+import { BackButton } from "@/components/BackButton";
+import { BottomSheet } from "@/components/BottomSheet";
+import { Transactions } from "@/components/Transactions";
+import { TransactionProps } from "@/components/Transaction";
+import { TransactionTypeSelect } from "@/components/TransactionTypeSelect";
 
 // UTILS
-import { mocks } from "@/utils/mocks"
-import { currencyFormat } from "@/utils/currencyFormat"
+import { mocks } from "@/utils/mocks";
+import { currencyFormat } from "@/utils/currencyFormat";
 
 type Details = {
-  name: string
-  total: string
-  current: string
-  percentage: number
-  transactions: TransactionProps[]
-}
+  name: string;
+  total: string;
+  current: string;
+  percentage: number;
+  transactions: TransactionProps[];
+};
 
 export default function Details() {
-  const [amount, setAmount] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
-  const [type, setType] = useState<"up" | "down">("up")
-  const [goal, setGoal] = useState<Details>({} as Details)
+  const [amount, setAmount] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [type, setType] = useState<"up" | "down">("up");
+  const [goal, setGoal] = useState<Details>({} as Details);
 
   // PARAMS
-  const routeParams = useLocalSearchParams()
-  const goalId = Number(routeParams.id)
+  const routeParams = useLocalSearchParams();
+  const goalId = Number(routeParams.id);
 
-  //DATABADE
-  const useGoal = useGoalRepository()
+  //DATABASE
+  const useGoal = useGoalRepository();
+  const useTransaction = useTransactionRepository();
 
   // BOTTOM SHEET
-  const bottomSheetRef = useRef<Bottom>(null)
-  const handleBottomSheetOpen = () => bottomSheetRef.current?.expand()
-  const handleBottomSheetClose = () => bottomSheetRef.current?.snapToIndex(0)
+  const bottomSheetRef = useRef<Bottom>(null);
+  const handleBottomSheetOpen = () => bottomSheetRef.current?.expand();
+  const handleBottomSheetClose = () => bottomSheetRef.current?.snapToIndex(0);
 
   function fetchDetails() {
     try {
       if (goalId) {
-        const goal = useGoal.show(goalId)
-        const transactions = mocks.transactions
+        const goal = useGoal.show(goalId);
+        const transactions = useTransaction.findByGoal(goalId);
 
         if (!goal || !transactions) {
-          return router.back()
+          return router.back();
         }
 
         setGoal({
@@ -67,49 +69,50 @@ export default function Details() {
           percentage: (goal.current / goal.total) * 100,
           transactions: transactions.map((item) => ({
             ...item,
-            date: dayjs(item.created_at).format("DD/MM/YYYY [às] HH:mm"),
+            date: dayjs(item.created_at).format("DD/MM/YYYY [as] HH:mm"),
           })),
-        })
+        });
 
-        setIsLoading(false)
+        setIsLoading(false);
       }
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
   }
 
   async function handleNewTransaction() {
     try {
-      let amountAsNumber = Number(amount.replace(",", "."))
+      let amountAsNumber = Number(amount.replace(",", "."));
 
       if (isNaN(amountAsNumber)) {
-        return Alert.alert("Erro", "Valor inválido.")
+        return Alert.alert("Erro", "Valor inválido.");
       }
 
       if (type === "down") {
-        amountAsNumber = amountAsNumber * -1
+        amountAsNumber = amountAsNumber * -1;
       }
 
-      console.log({ goalId, amount: amountAsNumber })
+      useTransaction.create({ goalId, amount: amountAsNumber });
 
-      Alert.alert("Sucesso", "Transação registrada!")
+      Alert.alert("Sucesso", "Transação registrada!");
 
-      handleBottomSheetClose()
-      Keyboard.dismiss()
+      handleBottomSheetClose();
+      Keyboard.dismiss();
 
-      setAmount("")
-      setType("up")
+      setAmount("");
+      setType("up");
+      fetchDetails();
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
   }
 
   useEffect(() => {
-    fetchDetails()
-  }, [])
+    fetchDetails();
+  }, []);
 
   if (isLoading) {
-    return <Loading />
+    return <Loading />;
   }
 
   return (
@@ -142,5 +145,5 @@ export default function Details() {
         <Button title="Confirmar" onPress={handleNewTransaction} />
       </BottomSheet>
     </View>
-  )
+  );
 }
